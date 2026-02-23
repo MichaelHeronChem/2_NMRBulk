@@ -21,10 +21,14 @@ ALDEHYDE_DICT_PATH = os.path.join(DICT_DIR, "aldehyde_dictionary.tsv")
 
 LINE_WIDTH = 0.5
 PNG_DPI = 300
-Y_UPPER_BUFFER = 1.2
-Y_LOWER_BUFFER = -0.5
+Y_UPPER_BUFFER = 1.35  # Room for peak labels
+Y_LOWER_BUFFER = -0.1
 SOLVENT_PPM = 1.98
 LINE_BROADENING = 0.5
+
+# Peak Picking Settings
+PEAK_THRESHOLD_FACTOR = 0.05  # 5% of global maximum intensity
+LABEL_FONT_SIZE = 7
 
 # =============================================================================
 # DICTIONARY LOADING & CLEANING
@@ -33,35 +37,28 @@ LINE_BROADENING = 0.5
 
 def sanitize_filename(name):
     """Removes characters that are illegal or problematic in filenames."""
-    # Replace commas and brackets with dashes, spaces with underscores
     name = (
         str(name).replace(",", "-").replace("[", "").replace("]", "").replace(" ", "_")
     )
-    # Remove anything else that isn't alphanumeric, dash, or underscore
     return re.sub(r"(?u)[^-\w.]", "", name)
 
 
 def load_dicts():
     amine_map = {}
     ald_map = {}
-
     try:
-        # Added r"\s+" to fix SyntaxWarning and .strip() to fix lookup misses
         if os.path.exists(AMINE_DICT_PATH):
             df = pd.read_csv(AMINE_DICT_PATH, sep=r"\s+", engine="python")
             amine_map = {
                 str(k).strip(): str(v).strip() for k, v in zip(df["Number"], df["Name"])
             }
-
         if os.path.exists(ALDEHYDE_DICT_PATH):
             df = pd.read_csv(ALDEHYDE_DICT_PATH, sep=r"\s+", engine="python")
             ald_map = {
                 str(k).strip(): str(v).strip() for k, v in zip(df["Number"], df["Name"])
             }
-
     except Exception as e:
         print(f"Error loading dictionaries: {e}")
-
     return amine_map, ald_map
 
 
@@ -121,14 +118,12 @@ def main():
             amine_id = parts[0].strip()
             ald_id = parts[2].strip()
 
-            # Map names and sanitize for file system
             amine_raw = amine_lookup.get(amine_id, f"Amine-{amine_id}")
             ald_raw = ald_lookup.get(ald_id, f"Aldehyde-{ald_id}")
 
             amine_clean = sanitize_filename(amine_raw)
             ald_clean = sanitize_filename(ald_raw)
             clean_filename = f"{amine_clean}_{ald_clean}"
-
         except Exception:
             clean_filename = folder_name
             amine_raw, ald_raw = "Unknown", "Unknown"
@@ -139,9 +134,11 @@ def main():
         scout_dir = os.path.join(folder, "scoutfids", "PRESAT_01_Scout1D.fid")
 
         if not (os.path.exists(presat_dir) and os.path.exists(scout_dir)):
+            print(f"  -> Skipping: Missing fid files.")
             continue
 
         try:
+            # Data Processing
             ppm_shift = find_ppm_shift(scout_dir)
             dic, data = ng.varian.read(presat_dir)
             dic, data = process_fid(dic, data)
@@ -149,9 +146,39 @@ def main():
             ppm_scale += ppm_shift
             final_data = np.real(data)
 
+            # --- Peak Picking ---
+            # Use 'pthres' for the positive threshold in modern nmrglue
+            thres_value = np.max(final_data) * PEAK_THRESHOLD_FACTOR
+            peaks = ng.analysis.peakpick.pick(final_data, pthres=thres_value)
+
+            # Plotting
             fig, ax = plt.subplots(figsize=(12, 6))
             ax.plot(ppm_scale, final_data, color="black", linewidth=LINE_WIDTH)
+
+            # Filter and annotate peaks
+            for p in peaks:
+                idx = int(p[0])
+                p_ppm = ppm_scale[idx]
+                p_amp = final_data[idx]
+
+                # Only label peaks in requested regions
+                if p_ppm > 6.0 or p_ppm < 1.0:
+                    ax.annotate(
+                        f"{p_ppm:.2f}",
+                        xy=(p_ppm, p_amp),
+                        xytext=(0, 8),  # 8 points vertical offset
+                        textcoords="offset points",
+                        ha="center",
+                        va="bottom",
+                        rotation=90,
+                        fontsize=LABEL_FONT_SIZE,
+                        color="blue",
+                        fontweight="bold",
+                    )
+
+            # Formatting
             ax.set_xlim(14.0, -0.5)
+            # Adjusting Y-limit based on peak height to ensure labels fit
             ax.set_ylim(
                 np.max(final_data) * Y_LOWER_BUFFER, np.max(final_data) * Y_UPPER_BUFFER
             )
@@ -162,7 +189,7 @@ def main():
             ax.ticklabel_format(style="sci", axis="y", scilimits=(-2, 2))
             ax.get_yaxis().set_visible(False)
 
-            # Title can keep the commas for readability
+            plt.title(f"{amine_raw} + {ald_raw}", fontsize=10)
             plt.tight_layout()
 
             plt.savefig(os.path.join(SVG_DIR, f"{clean_filename}.svg"), format="svg")
