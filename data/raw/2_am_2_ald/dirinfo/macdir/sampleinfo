@@ -1,0 +1,10 @@
+SAMPLE#: 70
+USER: service
+MACRO: cpautoQ('loc70_001','day')
+SOLVENT: cd3cn
+TEXT: FTS:xtst45:UG4:MH_2B1:MeCN
+SampleDir: service
+USERDIR: /home/service/vnmrsys
+DATA: 
+STATUS: Queued
+---------------------------------------------
