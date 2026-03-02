@@ -139,7 +139,7 @@ def main():
         if getattr(config, "AUTO_X_LIMITS", True):
             # Find the absolute min and max ppm across all data we just plotted
             all_ppms = np.concatenate([ppm for ppm, _ in spectra_to_plot.values()])
-            ax.set_xlim(np.max(all_ppms), np.min(all_ppms))
+            ax.set_xlim(np.max(all_ppms), -0.5)
         else:
             ax.set_xlim(
                 getattr(config, "FIXED_X_MAX", 12.0),
@@ -148,7 +148,7 @@ def main():
 
         # Restrict y-axis dynamically based on the tallest peak in the whole plot
         if max_y_plotted != -np.inf:
-            ax.set_ylim(-0.5 * max_y_plotted, 1.2 * max_y_plotted)
+            ax.set_ylim(-0.2 * max_y_plotted, 1.1 * max_y_plotted)
 
         ax.set_xlabel("Chemical Shift (ppm)", fontsize=12)
         ax.set_ylabel(
