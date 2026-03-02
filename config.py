@@ -3,7 +3,7 @@
 # ==========================================
 
 # --- General ---
-LINE_BROADENING = 1.0  # Hz
+LINE_BROADENING = 0  # Hz
 SOLVENT_PPM = 1.94  # Acetonitrile (CD3CN) standard chemical shift
 
 # --- Phasing Mode ---
@@ -16,7 +16,7 @@ SOLVENT_PPM = 1.94  # Acetonitrile (CD3CN) standard chemical shift
 PHASE_MODE = "edge_anchor"
 
 # --- Edge Anchor / Symmetry Parameters ---
-ANCHOR_PPM = 11.0  # The target ppm for the anchor peak (used in 'edge_anchor')
+ANCHOR_PPM = 10.0  # The target ppm for the anchor peak (used in 'edge_anchor')
 EDGE_THRESHOLD = 0.10  # Fraction of peak max to define edges
 
 # --- Auto-Phasing & Auto-Baseline Exclusion Zone ---
@@ -28,7 +28,7 @@ EXCLUDE_PPM_MAX = 4.5
 # Used only if PHASE_MODE = 'manual'
 P0 = 9.69
 P1 = -1.59
-PIVOT_PPM = 6.0
+PIVOT_PPM = 10
 
 # --- Baseline Correction ---
 # Uses masked polynomial auto-baseline

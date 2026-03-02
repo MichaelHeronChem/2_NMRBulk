@@ -49,7 +49,7 @@ def process_fid(dic, data, shift=0.0):
             ppm_scale_ref > config.EXCLUDE_PPM_MAX
         )
         try:
-            p0, p1 = edge_phasing.autophase_anchor_twist(
+            p0, p1, pivot_idx = edge_phasing.autophase_anchor_twist(
                 data,
                 ppm_scale_ref,
                 valid_mask,
@@ -57,6 +57,13 @@ def process_fid(dic, data, shift=0.0):
                 edge_threshold=getattr(config, "EDGE_THRESHOLD", 0.10),
             )
             data = ng.proc_base.ps(data, p0=p0, p1=p1)
+
+            # Store the exact anchor ppm in the dictionary so the plotting script can find it
+            if pivot_idx is not None:
+                if "processing_info" not in dic:
+                    dic["processing_info"] = {}
+                dic["processing_info"]["anchor_ppm"] = ppm_scale_ref[pivot_idx]
+
         except Exception as e:
             print(
                 f"  -> Auto-phase (edge_anchor) failed, falling back to unphased: {e}"

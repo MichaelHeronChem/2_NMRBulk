@@ -77,7 +77,7 @@ def autophase_edge_symmetry(
         return initial_p0, initial_p1
 
     # Find prominent peaks (at least 5% of max)
-    peaks, _ = find_peaks(masked_magnitude, height=global_max * 0.008, distance=20)
+    peaks, _ = find_peaks(masked_magnitude, height=global_max * 0.05, distance=20)
 
     # 2. Map the edges for each peak
     peak_data = []
@@ -146,7 +146,7 @@ def autophase_anchor_twist(
 
     global_max = np.max(masked_magnitude)
     if global_max == 0:
-        return 0.0, 0.0
+        return 0.0, 0.0, None
 
     peaks, _ = find_peaks(masked_magnitude, height=global_max * 0.05, distance=20)
 
@@ -163,7 +163,7 @@ def autophase_anchor_twist(
             peak_data.append((p, l, r))
 
     if not peak_data:
-        return 0.0, 0.0
+        return 0.0, 0.0, None
 
     # Find the peak closest to the anchor_ppm
     closest_peak = None
@@ -176,7 +176,7 @@ def autophase_anchor_twist(
             closest_peak = p_info
 
     if closest_peak is None:
-        return 0.0, 0.0
+        return 0.0, 0.0, None
 
     pivot_idx = closest_peak[0]
     N = len(data)
@@ -201,4 +201,4 @@ def autophase_anchor_twist(
     # Convert back to global mathematical P0/P1 required by nmrglue
     final_p0 = opt_p0_at_anchor - opt_p1 * (pivot_idx / (N - 1))
 
-    return final_p0, opt_p1
+    return final_p0, opt_p1, pivot_idx
