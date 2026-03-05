@@ -1,0 +1,16 @@
+Starting NMR processing job on cn034.ham8.dur.ac.uk at Thu  5 Mar 15:30:55 GMT 2026
+Working directory: /nobackup/xtst45/2_NMRBulk
+Starting NMR Processing Script...
+Discovered 3 blocks to process: ['Block_1', 'Block_2', 'Block_3']
+
+==========================================
+PROCESSING BLOCK: Block_1
+==========================================
+Found 20 reactions in this block.
+[1/20] Reaction: 1_am_6_ald... DONE. Found: (Ald, Imine) Ratio: 0.044
+[2/20] Reaction: 1_am_20_ald... DONE. Found: (Ald) Ratio: 0.000
+[3/20] Reaction: 1_am_8_ald... DONE. Found: (Ald, Imine) Ratio: 0.164
+[4/20] Reaction: 1_am_12_ald... DONE. Found: (Ald, Imine) Ratio: 0.052
+[5/20] Reaction: 1_am_5_ald... DONE. Found: (Ald) Ratio: 0.000
+[6/20] Reaction: 1_am_17_ald... DONE. Found: (Ald) Ratio: 0.000
+[7/20] Reaction: 1_am_13_ald... 
