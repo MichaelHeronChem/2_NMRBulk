@@ -1,0 +1,66 @@
+Starting NMR processing job on cn044.ham8.dur.ac.uk at Thu  5 Mar 14:14:49 GMT 2026
+Working directory: /nobackup/xtst45/2_NMRBulk
+
+Processing Imine Reaction: 1_am_6_ald
+  --> Saved plot: data/processed/plot_1_am_6_ald.png
+
+Processing Imine Reaction: 1_am_20_ald
+  --> Saved plot: data/processed/plot_1_am_20_ald.png
+
+Processing Imine Reaction: 1_am_8_ald
+  --> Saved plot: data/processed/plot_1_am_8_ald.png
+
+Processing Imine Reaction: 1_am_12_ald
+  --> Saved plot: data/processed/plot_1_am_12_ald.png
+
+Processing Imine Reaction: 1_am_5_ald
+  --> Saved plot: data/processed/plot_1_am_5_ald.png
+
+Processing Imine Reaction: 1_am_17_ald
+  --> Saved plot: data/processed/plot_1_am_17_ald.png
+
+Processing Imine Reaction: 1_am_13_ald
+  --> Saved plot: data/processed/plot_1_am_13_ald.png
+
+Processing Imine Reaction: 1_am_15_ald
+  --> Saved plot: data/processed/plot_1_am_15_ald.png
+
+Processing Imine Reaction: 1_am_1_ald
+  --> Saved plot: data/processed/plot_1_am_1_ald.png
+
+Processing Imine Reaction: 1_am_18_ald
+  --> Saved plot: data/processed/plot_1_am_18_ald.png
+
+Processing Imine Reaction: 1_am_7_ald
+  --> Saved plot: data/processed/plot_1_am_7_ald.png
+
+Processing Imine Reaction: 1_am_19_ald
+  --> Saved plot: data/processed/plot_1_am_19_ald.png
+
+Processing Imine Reaction: 1_am_3_ald
+  --> Saved plot: data/processed/plot_1_am_3_ald.png
+
+Processing Imine Reaction: 1_am_14_ald
+  --> Saved plot: data/processed/plot_1_am_14_ald.png
+
+Processing Imine Reaction: 1_am_2_ald
+  --> Saved plot: data/processed/plot_1_am_2_ald.png
+
+Processing Imine Reaction: 1_am_10_ald
+  --> Saved plot: data/processed/plot_1_am_10_ald.png
+
+Processing Imine Reaction: 1_am_9_ald
+  --> Saved plot: data/processed/plot_1_am_9_ald.png
+
+Processing Imine Reaction: 1_am_16_ald
+  --> Saved plot: data/processed/plot_1_am_16_ald.png
+
+Processing Imine Reaction: 1_am_11_ald
+  --> Saved plot: data/processed/plot_1_am_11_ald.png
+
+Processing Imine Reaction: 15_am_9_ald
+  --> Saved plot: data/processed/plot_15_am_9_ald.png
+
+Processing Imine Reaction: 1_am_4_ald
+  --> Saved plot: data/processed/plot_1_am_4_ald.png
+Job finished at Thu  5 Mar 14:17:19 GMT 2026

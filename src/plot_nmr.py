@@ -4,6 +4,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import nmrglue as ng
+from scipy.signal import find_peaks  # Added for peak picking
 
 import config
 from processing import process_fid, get_ppm_scale, find_ppm_shift
@@ -37,6 +38,120 @@ def resolve_pure_spectrum(base_path, is_amine=False):
         return get_spectrum(presat_dir, shift, anchor_target=target)
     else:
         return get_spectrum(base_path, shift=0.0, anchor_target=target)
+
+
+# --- Peak Picking Logic ---
+
+def get_region_max(ppm, data, min_ppm=5.0, max_ppm=12.0):
+    """Gets the max intensity only in the downfield region, ignoring massive solvent peaks."""
+    mask = (ppm >= min_ppm) & (ppm <= max_ppm)
+    return np.max(data[mask]) if np.any(mask) else np.max(data)
+
+
+def get_pure_aldehyde_peak(ppm, data):
+    """Finds the leftmost singlet (highest ppm peak) in the pure aldehyde spectrum."""
+    # Typically aldehyde protons are between 8.5 and 11.5 ppm
+    mask = (ppm >= 8.5) & (ppm <= 11)
+    valid_indices = np.where(mask)[0]
+    if len(valid_indices) == 0:
+        return None
+    
+    sub_data = data[valid_indices]
+    region_max = get_region_max(ppm, data)
+    
+    peaks, _ = find_peaks(sub_data, height=0.05 * region_max, prominence=0.02 * region_max)
+    
+    if len(peaks) > 0:
+        peak_ppms = ppm[valid_indices[peaks]]
+        return np.max(peak_ppms)  # Leftmost peak
+    else:
+        # Fallback if find_peaks misses it
+        local_max_idx = np.argmax(sub_data)
+        if sub_data[local_max_idx] > 0.05 * region_max:
+            return ppm[valid_indices[local_max_idx]]
+    return None
+
+
+def check_peak_presence(target_ppm, sm_tuple, tol=0.2):
+    """Checks if a peak exists in the starting material spectrum at the target ppm."""
+    if sm_tuple is None:
+        return False
+    ppm, data, _ = sm_tuple
+    mask = (ppm >= target_ppm - tol) & (ppm <= target_ppm + tol)
+    valid_indices = np.where(mask)[0]
+    if len(valid_indices) == 0:
+        return False
+    
+    sub_data = data[valid_indices]
+    region_max = get_region_max(ppm, data)
+    
+    # 1. Check if there is a distinct peak in this region (matches imine detection sensitivity)
+    peaks, _ = find_peaks(sub_data, height=0.005 * region_max, prominence=0.002 * region_max)
+    if len(peaks) > 0:
+        return True
+        
+    # 2. Fallback: if there's no sharp peak, check if there's significant raw intensity 
+    # (Using 0.5% of the aromatic region max to block small SM humps from becoming imines)
+    local_max = np.max(sub_data)
+    if local_max > 0.005 * region_max:
+        return True
+        
+    return False
+
+
+def find_reaction_peaks(rxn_ppm, rxn_data, pure_ald_tuple, pure_amine_tuple):
+    """Finds the aldehyde and imine peaks in the reaction spectrum."""
+    results = {"aldehyde": None, "imine": None}
+    
+    pure_ald_ppm = None
+    if pure_ald_tuple:
+        p_ppm, p_data, _ = pure_ald_tuple
+        pure_ald_ppm = get_pure_aldehyde_peak(p_ppm, p_data)
+        
+    # 1. Identify Reaction Aldehyde Peak
+    rxn_ald_ppm = None
+    if pure_ald_ppm is not None:
+        # Should show up in reaction spectra +/- 0.2 ppm
+        mask = (rxn_ppm >= pure_ald_ppm - 0.2) & (rxn_ppm <= pure_ald_ppm + 0.2)
+        valid_indices = np.where(mask)[0]
+        if len(valid_indices) > 0:
+            local_max_idx = valid_indices[np.argmax(rxn_data[valid_indices])]
+            rxn_ald_ppm = rxn_ppm[local_max_idx]
+            results["aldehyde"] = rxn_ald_ppm
+            
+    # 2. Identify Reaction Imine Peak
+    if rxn_ald_ppm is not None:
+        search_max = rxn_ald_ppm - 0.05  # Must be strictly to the right of aldehyde
+        search_min = 7.0  # Broadened slightly to safely capture imine
+        
+        mask = (rxn_ppm >= search_min) & (rxn_ppm <= search_max)
+        valid_indices = np.where(mask)[0]
+        
+        if len(valid_indices) > 0:
+            sub_data = rxn_data[valid_indices]
+            region_max = get_region_max(rxn_ppm, rxn_data)
+            
+            # Use sensitivity relative to the aromatic region, not the entire spectrum
+            peaks, _ = find_peaks(sub_data, height=0.005 * region_max, prominence=0.002 * region_max)
+            
+            if len(peaks) > 0:
+                peak_ppms = rxn_ppm[valid_indices[peaks]]
+                
+                # Sort by distance to the aldehyde peak (closest first)
+                distances = np.abs(rxn_ald_ppm - peak_ppms)
+                sorted_idx = np.argsort(distances)
+                peak_ppms = peak_ppms[sorted_idx]
+                
+                for p_ppm in peak_ppms:
+                    # Check if peak is unique to reaction (not in amine or aldehyde)
+                    in_amine = check_peak_presence(p_ppm, pure_amine_tuple)
+                    in_ald = check_peak_presence(p_ppm, pure_ald_tuple)
+                    
+                    if not in_amine and not in_ald:
+                        results["imine"] = p_ppm
+                        break  # Found the closest unique singlet to the right
+                    
+    return results
 
 
 def main():
@@ -125,6 +240,15 @@ def main():
                     # Creating a new tuple with the normalized data safely avoids mutating the cache
                     spectra_to_plot[label] = (ppm, data / visible_max, anchor)
 
+        # --- Identify Specific Peaks (Aldehyde & Imine) ---
+        rxn_tuple = spectra_to_plot.get("Reaction")
+        ald_tuple = spectra_to_plot.get("Pure Aldehyde")
+        amine_tuple = spectra_to_plot.get("Pure Amine")
+        
+        peak_labels = {"aldehyde": None, "imine": None}
+        if rxn_tuple:
+            peak_labels = find_reaction_peaks(rxn_tuple[0], rxn_tuple[1], ald_tuple, amine_tuple)
+
         # 4. Plotting (Stacked)
         if getattr(config, "NORMALIZE_SPECTRA", True):
             offset_step = 1.1
@@ -151,13 +275,27 @@ def main():
             ax.axhline(y=y_offset, color="gray", linestyle="--", linewidth=0.5, alpha=0.7)
             ax.plot(ppm, plotted_data, label=label, linewidth=0.3, color="black")
             
-            if anchor is not None:
-                idx = np.abs(ppm - anchor).argmin()
-                anchor_y = plotted_data[idx]
-                if plot_x_min <= anchor <= plot_x_max:
-                    ax.plot(ppm[idx], anchor_y, marker='v', color='red', markersize=5)
-                    ax.text(ppm[idx], anchor_y + (offset_step * 0.05), 'Anchor', 
-                            color='red', fontsize=8, ha='center', va='bottom', zorder=5)
+            # --- Draw Annotations ---
+            if label == "Reaction":
+                # Label Aldehyde peak
+                if peak_labels["aldehyde"]:
+                    ald_ppm = peak_labels["aldehyde"]
+                    idx = np.abs(ppm - ald_ppm).argmin()
+                    peak_y = plotted_data[idx]
+                    if plot_x_min <= ald_ppm <= plot_x_max:
+                        ax.plot(ppm[idx], peak_y, marker='*', color='blue', markersize=8)
+                        ax.text(ppm[idx], peak_y + (offset_step * 0.08), f"{ald_ppm:.2f}", 
+                                color='blue', fontsize=9, ha='center', va='bottom', zorder=5)
+                
+                # Label Imine peak
+                if peak_labels["imine"]:
+                    imine_ppm = peak_labels["imine"]
+                    idx = np.abs(ppm - imine_ppm).argmin()
+                    peak_y = plotted_data[idx]
+                    if plot_x_min <= imine_ppm <= plot_x_max:
+                        ax.plot(ppm[idx], peak_y, marker='^', color='green', markersize=7)
+                        ax.text(ppm[idx], peak_y + (offset_step * 0.08), f"{imine_ppm:.2f}", 
+                                color='green', fontsize=9, ha='center', va='bottom', zorder=5)
 
             y_offset -= offset_step
 

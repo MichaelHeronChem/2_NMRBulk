@@ -13,7 +13,7 @@ SOLVENT_PPM = 1.96  # Acetonitrile (CD3CN) standard chemical shift
 PHASE_MODE = "edge_anchor"
 
 # --- Edge Anchor / Symmetry Parameters ---
-ANCHOR_PPM = 10.0  # The target ppm for the anchor peak (used in 'edge_anchor')
+ANCHOR_PPM = 10  # The target ppm for the anchor peak (used in 'edge_anchor')
 EDGE_THRESHOLD = 0.10  # Fraction of peak max to define edges
 
 # --- Auto-Phasing & Auto-Baseline Exclusion Zone ---
